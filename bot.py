@@ -12,6 +12,7 @@ from fastapi import FastAPI, Request
 import uvicorn
 
 bot = Bot(token=os.environ.get("BOT_TOKEN"))
+dp = Dispatcher()
 ADMIN_ID = int(os.environ.get("ADMIN_ID"))
 CHANNEL_ID = int(os.environ.get("CHANNEL_ID"))
 DB_URL = os.environ.get("DATABASE_URL")
