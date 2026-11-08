@@ -10,6 +10,7 @@ from aiogram.fsm.state import State, StatesGroup
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 import uvicorn
+from aiogram.types import ChatMemberUpdated
 
 bot = Bot(token=os.environ.get("BOT_TOKEN"))
 dp = Dispatcher()
@@ -27,6 +28,29 @@ def get_cursor():
 
 conn = psycopg.connect(DB_URL, autocommit=True)
 get_cursor().execute("CREATE TABLE IF NOT EXISTS bot_users (user_id BIGINT PRIMARY KEY, last_post TEXT)")
+
+@dp.chat_member(F.new_chat_member.status == "member")
+async def on_user_join(event: ChatMemberUpdated):
+    if event.chat.id != CHANNEL_ID:
+        return
+
+    bot_info = await bot.get_me()
+    btn = InlineKeyboardButton(text="📝 Подать объявление", url=f"https://t.me/{helper_job26_bot}")
+    kb = InlineKeyboardMarkup(inline_keyboard=[[btn]]))
+
+    msg = await bot.send_message(
+        chat_id=event.chat.id,
+        text=f"Добро пожаловать, {event.new_chat_member.user.first_name}!\nПодать объявление можно в нашем боте.",
+        reply_markup=kb
+    )
+    
+    async def delete_later():
+        await asyncio.sleep(300)
+        try:
+            await bot.delete_message(chat_id=event.chat.id, message_id=msg.message_id)
+        except Exception:
+            pass
+    asyncio.create_task(delete_later())
 
 class AdForm(StatesGroup):
     waiting_for_text = State()
