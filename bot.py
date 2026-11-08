@@ -36,7 +36,7 @@ async def on_user_join(event: ChatMemberUpdated):
 
     bot_info = await bot.get_me()
     btn = InlineKeyboardButton(text="📝 Подать объявление", url=f"https://t.me/{helper_job26_bot}")
-    kb = InlineKeyboardMarkup(inline_keyboard=[[btn]]))
+    kb = InlineKeyboardMarkup(inline_keyboard=[[btn]])
 
     msg = await bot.send_message(
         chat_id=event.chat.id,
