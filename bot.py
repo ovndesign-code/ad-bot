@@ -113,10 +113,10 @@ async def process_reject(callback: CallbackQuery):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await bot.set_webhook(f"{render_url}/webhook", allowed_updates=dp.resolve_used_update_types())
+    await bot.delete_webhook(drop_pending_updates=True)
     render_url = os.environ.get("RENDER_EXTERNAL_URL")
     if render_url:
-        await bot.set_webhook(f"{render_url}/webhook")
+        await bot.set_webhook(f"{render_url}/webhook", allowed_updates=dp.resolve_used_update_types())
     yield
     await bot.session.close()
 
