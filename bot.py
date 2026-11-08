@@ -54,6 +54,7 @@ async def on_user_join(event: ChatMemberUpdated):
 
 class AdForm(StatesGroup):
     waiting_for_text = State()
+    waiting_for_reject_reason = State()
 
 @dp.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
@@ -89,7 +90,7 @@ async def process_ad_text(message: Message, state: FSMContext):
     await message.answer("Ваше объявление отправлено на модерацию! Ожидайте.")
 
     btn_ok = InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_{user_id}")
-    btn_no = InlineKeyboardButton(text="❌ Отклонить", callback_data="reject")
+    btn_no = InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{user_id}")
     kb = InlineKeyboardMarkup(inline_keyboard=[[btn_ok, btn_no]])
 
     await bot.send_message(ADMIN_ID, f"Новое объявление на модерацию:\n\n{ad_text}", reply_markup=kb)
@@ -106,10 +107,33 @@ async def process_approve(callback: CallbackQuery):
     await bot.send_message(author_id, "Ваше объявление одобрено и опубликовано в канале!")
     await callback.answer("Опубликовано!")
 
-@dp.callback_query(F.data == "reject")
-async def process_reject(callback: CallbackQuery):
-    await callback.message.edit_text(f"{callback.message.text}\n\n❌ ОТКЛОНЕНО")
-    await callback.answer("Отклонено!")
+@dp.callback_query(F.data.startswith("reject_"))
+async def process_reject_start(callback: CallbackQuery, state: FSMContext):
+    author_id = callback.data.split("_")[1]
+    await state.update_data(author_id=author_id, admin_msg_id=callback.message.message_id)
+    await state.set_state(AdForm.waiting_for_reject_reason)
+    await callback.message.answer("Напишите причину отказа (этот текст увидит автор):")
+    await callback.answer()
+
+@dp.message(AdForm.waiting_for_reject_reason)
+async def process_reject_reason(message: Message, state: FSMContext):
+    data = await state.get_data()
+    author_id = data.get("author_id")
+    reason = message.text
+
+    try:
+        await bot.send_message(author_id, f"❌ Ваше объявление отклонено.\nПричина: {reason}")
+    except Exception as e:
+        print(f"Не удалось отправить сообщение автору: {e}")
+    
+    await message.answer("Причина отправлена автору. Объявление отклонено.")
+
+    try:
+        await bot.edit_message_text(chat_id=ADMIN_ID, message_id=data.get("admin_msg_id"), text="❌ Объявление отклонено (причина отправлена)")
+    except Exception:
+        pass
+    
+    await state.clear()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
