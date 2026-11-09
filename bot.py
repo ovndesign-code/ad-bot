@@ -135,6 +135,10 @@ async def process_reject_reason(message: Message, state: FSMContext):
     
     await state.clear()
 
+    @dp.message()
+    async def fallback_handler(message: Message):
+        await message.answer("Я вас не понял. Пожалуйста, нажмите /start и выберите кнопку «📝 Подать объявление».")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await bot.delete_webhook(drop_pending_updates=True)
