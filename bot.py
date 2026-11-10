@@ -65,6 +65,9 @@ async def cmd_start(message: Message, state: FSMContext):
 
 @dp.callback_query(F.data == "start_ad")
 async def process_start_ad(callback: CallbackQuery, state: FSMContext):
+    # СРАЗУ убираем "часики" с кнопки, чтобы Telegram не выдал ошибку
+    await callback.answer()
+
     user_id = callback.from_user.id
     cursor = get_cursor()
     cursor.execute("SELECT last_post FROM bot_users WHERE user_id = %s", (user_id,))
@@ -72,12 +75,18 @@ async def process_start_ad(callback: CallbackQuery, state: FSMContext):
 
     if row:
         last_post = datetime.fromisoformat(row[0])
-        if datetime.now() - last_post < timedelta(hours=24):
-            await callback.answer("Вы можете подать только 1 объявление в сутки!", show_alert=True)
+        time_passed = datetime.now() - last_post
+        if time_passed < timedelta(hours=24):
+            time_left = timedelta(hours=24) - time_passed
+            hours_left = int(time_left.total_seconds() // 3600)
+            minutes_left = int((time_left.total_seconds() % 3600) // 60)
+
+            text_msg = f"⏳ Вы уже подавали объявление. Следующее можно будет отправить через {hours_left} ч. {minutes_left} мин."
+            await callback.message.answer(text_msg)
             return
+
     await callback.message.answer("Отправьте текст вашего объявления одним сообщением:")
     await state.set_state(AdForm.waiting_for_text)
-    await callback.answer()
 
 @dp.message(AdForm.waiting_for_text)
 async def process_ad_text(message: Message, state: FSMContext):
